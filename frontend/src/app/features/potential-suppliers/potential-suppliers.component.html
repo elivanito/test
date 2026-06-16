@@ -1,0 +1,149 @@
+<section class="panel">
+  <div class="panel-header">
+    <h2>Search</h2>
+  </div>
+
+  <form class="search-form" (submit)="$event.preventDefault(); search$()">
+    <div class="field">
+      <label for="rate">Order amount (€)</label>
+      <input
+        id="rate"
+        type="number"
+        min="{{ minRate }}"
+        step="1"
+        placeholder="Minimum {{ minRate }}"
+        [ngModel]="rateInput()"
+        (ngModelChange)="rateInput.set($event)"
+        name="rate"
+      />
+      @if (rateInvalid()) {
+        <small class="field-error">The amount must be at least {{ minRate }} €.</small>
+      }
+    </div>
+    <div class="actions">
+      <button type="submit" class="primary"
+              [disabled]="loading() || rateInput() === null || rateInvalid()">
+        Search
+      </button>
+    </div>
+  </form>
+</section>
+
+@if (errorMessage()) {
+  <div class="banner banner-error" role="alert">
+    <strong>Error:</strong> {{ errorMessage() }}
+  </div>
+}
+
+@if (appliedRate() !== null && !errorMessage()) {
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Results <span class="muted">(rate {{ appliedRate() | number:'1.0-0':'es-ES' }} €)</span></h2>
+      <div class="result-count" aria-live="polite">
+        @if (loading()) {
+          Loading…
+        } @else {
+          <strong>{{ total() }}</strong> matching supplier{{ total() === 1 ? '' : 's' }}
+        }
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="field grow">
+        <label for="search">Search (name or DUNS)</label>
+        <input id="search" type="text" placeholder="e.g. Zippers, 100000001"
+               [ngModel]="search()" (ngModelChange)="search.set($event)" />
+      </div>
+      <div class="field">
+        <label for="country">Country</label>
+        <select id="country"
+                [ngModel]="countryFilter()"
+                (ngModelChange)="countryFilter.set($event)">
+          <option value="">All</option>
+          @for (c of availableCountries(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="rating">Rating</label>
+        <select id="rating"
+                [ngModel]="ratingFilter()"
+                (ngModelChange)="ratingFilter.set($event)">
+          <option value="">All</option>
+          @for (r of allRatings; track r) {
+            <option [value]="r">{{ r }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="limit">Per page</label>
+        <select id="limit"
+                [ngModel]="limit()"
+                (ngModelChange)="changeLimit(+$event)">
+          @for (n of [5, 10]; track n) {
+            <option [ngValue]="n">{{ n }}</option>
+          }
+        </select>
+      </div>
+      <div class="actions">
+        <button type="button" (click)="clearFilters()">Clear filters</button>
+      </div>
+    </div>
+
+    @if (!loading() && filteredSuppliers().length === 0) {
+      <div class="empty">
+        @if (suppliers().length === 0) {
+          No suppliers match the order amount.
+        } @else {
+          No suppliers match the current filters.
+        }
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" (click)="toggleSort('duns')">
+                DUNS<span>{{ sortGlyph('duns') }}</span>
+              </th>
+              <th class="sortable" (click)="toggleSort('name')">
+                Name<span>{{ sortGlyph('name') }}</span>
+              </th>
+              <th class="sortable" (click)="toggleSort('country')">
+                Country<span>{{ sortGlyph('country') }}</span>
+              </th>
+              <th class="sortable right" (click)="toggleSort('annualTurnover')">
+                Annual Turnover<span>{{ sortGlyph('annualTurnover') }}</span>
+              </th>
+              <th class="sortable" (click)="toggleSort('sustainabilityRating')">
+                Rating<span>{{ sortGlyph('sustainabilityRating') }}</span>
+              </th>
+              <th class="sortable right" (click)="toggleSort('score')">
+                Score<span>{{ sortGlyph('score') }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of filteredSuppliers(); track s.duns) {
+              <tr>
+                <td>{{ s.duns }}</td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.country }}</td>
+                <td class="right">{{ s.annualTurnover | number:'1.0-0':'es-ES' }} €</td>
+                <td><span class="rating rating-{{ s.sustainabilityRating }}">{{ s.sustainabilityRating }}</span></td>
+                <td class="right">{{ s.score | number:'1.2-2':'es-ES' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <div class="pagination">
+      <button type="button" (click)="goToPage(-1)" [disabled]="!hasPrevPage() || loading()">‹ Previous</button>
+      <span class="muted">Page {{ currentPage() }} of {{ totalPages() }}</span>
+      <button type="button" (click)="goToPage(1)" [disabled]="!hasNextPage() || loading()">Next ›</button>
+    </div>
+  </section>
+}
