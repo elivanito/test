@@ -7,9 +7,8 @@ import com.inditex.suppliers.application.port.in.RefuseCandidateUseCase;
 import com.inditex.suppliers.domain.model.Candidate;
 import com.inditex.suppliers.infrastructure.rest.dto.CandidateAcceptDto;
 import com.inditex.suppliers.infrastructure.rest.dto.CandidateDto;
+import com.inditex.suppliers.infrastructure.rest.validation.ValidDuns;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -51,19 +50,19 @@ public class CandidatesController {
     }
 
     @GetMapping("/{duns}")
-    public CandidateDto get(@PathVariable @Min(100_000_000L) @Max(999_999_999L) long duns) {
+    public CandidateDto get(@PathVariable @ValidDuns long duns) {
         return RestMapper.toDto(get.get(duns));
     }
 
     @PostMapping("/{duns}/accept")
-    public ResponseEntity<Void> accept(@PathVariable @Min(100_000_000L) @Max(999_999_999L) long duns,
+    public ResponseEntity<Void> accept(@PathVariable @ValidDuns long duns,
                                        @Valid @RequestBody CandidateAcceptDto body) {
         accept.accept(duns, body.sustainabilityRating());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{duns}/refuse")
-    public ResponseEntity<Void> refuse(@PathVariable @Min(100_000_000L) @Max(999_999_999L) long duns) {
+    public ResponseEntity<Void> refuse(@PathVariable @ValidDuns long duns) {
         refuse.refuse(duns);
         return ResponseEntity.noContent().build();
     }

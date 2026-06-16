@@ -25,15 +25,15 @@ public final class PersistenceMapper {
                 e.getName(),
                 CountryCode.of(e.getCountry()),
                 AnnualTurnover.of(e.getAnnualTurnover()),
-                toDomain(e.getState()),
-                e.getVersion() == null ? 0L : e.getVersion()
+                EnumMapper.map(e.getState(), CandidateState.class),
+                versionOrZero(e.getVersion())
         );
     }
 
     public static CandidateJpaEntity toEntity(Candidate c) {
         return new CandidateJpaEntity(
                 c.duns().value(),
-                toJpa(c.state()),
+                EnumMapper.map(c.state(), CandidateStateJpa.class),
                 c.name(),
                 c.country().value(),
                 c.annualTurnover().euros(),
@@ -47,9 +47,9 @@ public final class PersistenceMapper {
                 e.getName(),
                 CountryCode.of(e.getCountry()),
                 AnnualTurnover.of(e.getAnnualTurnover()),
-                SustainabilityRating.valueOf(e.getSustainabilityRating().name()),
-                toDomain(e.getStatus()),
-                e.getVersion() == null ? 0L : e.getVersion()
+                EnumMapper.map(e.getSustainabilityRating(), SustainabilityRating.class),
+                EnumMapper.map(e.getStatus(), SupplierStatus.class),
+                versionOrZero(e.getVersion())
         );
     }
 
@@ -59,25 +59,13 @@ public final class PersistenceMapper {
                 s.name(),
                 s.country().value(),
                 s.annualTurnover().euros(),
-                SustainabilityRatingJpa.valueOf(s.rating().name()),
-                toJpa(s.status()),
+                EnumMapper.map(s.rating(), SustainabilityRatingJpa.class),
+                EnumMapper.map(s.status(), SupplierStatusJpa.class),
                 s.version()
         );
     }
 
-    public static CandidateState toDomain(CandidateStateJpa s) {
-        return CandidateState.valueOf(s.name());
-    }
-
-    public static CandidateStateJpa toJpa(CandidateState s) {
-        return CandidateStateJpa.valueOf(s.name());
-    }
-
-    public static SupplierStatus toDomain(SupplierStatusJpa s) {
-        return SupplierStatus.valueOf(s.name());
-    }
-
-    public static SupplierStatusJpa toJpa(SupplierStatus s) {
-        return SupplierStatusJpa.valueOf(s.name());
+    private static long versionOrZero(Long version) {
+        return version == null ? 0L : version;
     }
 }

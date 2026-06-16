@@ -2,9 +2,8 @@ package com.inditex.suppliers.application.service;
 
 import com.inditex.suppliers.application.port.in.GetCandidateUseCase;
 import com.inditex.suppliers.application.port.out.CandidateRepository;
-import com.inditex.suppliers.domain.exception.CandidateNotFoundException;
+import com.inditex.suppliers.application.util.DunsLookup;
 import com.inditex.suppliers.domain.model.Candidate;
-import com.inditex.suppliers.domain.vo.Duns;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,8 +19,6 @@ public class GetCandidateService implements GetCandidateUseCase {
     @Override
     @Transactional(readOnly = true)
     public Candidate get(long dunsValue) {
-        Duns duns = Duns.of(dunsValue);
-        return candidates.findActiveByDuns(duns)
-                .orElseThrow(() -> new CandidateNotFoundException(dunsValue));
+        return DunsLookup.requireActiveCandidate(candidates, dunsValue);
     }
 }

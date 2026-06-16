@@ -6,7 +6,8 @@ import com.inditex.suppliers.application.port.out.CountryGateway;
 import com.inditex.suppliers.application.port.out.DomainEventOutbox;
 import com.inditex.suppliers.application.port.out.SupplierMetricsPort;
 import com.inditex.suppliers.application.port.out.SupplierRepository;
-import com.inditex.suppliers.domain.exception.CandidateNotFoundException;
+import com.inditex.suppliers.application.util.DunsLookup;
+import com.inditex.suppliers.application.util.OutboxPayloads;
 import com.inditex.suppliers.domain.model.Candidate;
 import com.inditex.suppliers.domain.model.Supplier;
 import com.inditex.suppliers.domain.vo.Duns;
@@ -38,17 +39,15 @@ public class AcceptCandidateService implements AcceptCandidateUseCase {
     @Override
     @Transactional
     public void accept(long dunsValue, SustainabilityRating rating) {
-        Duns duns = Duns.of(dunsValue);
-        Candidate candidate = candidates.findActiveByDuns(duns)
-                .orElseThrow(() -> new CandidateNotFoundException(dunsValue));
+        Candidate candidate = DunsLookup.requireActiveCandidate(candidates, dunsValue);
 
         boolean banned = countries.isBanned(candidate.country());
         Supplier supplier = candidate.accept(rating, banned);
 
-        candidates.deleteByDuns(duns);
+        candidates.deleteByDuns(Duns.of(dunsValue));
         suppliers.save(supplier);
         outbox.append("Candidate", String.valueOf(dunsValue), "CandidateAccepted",
-                "{\"duns\":" + dunsValue + ",\"rating\":\"" + rating.name() + "\"}");
+                OutboxPayloads.candidateAccepted(dunsValue, rating));
         metrics.candidateAccepted();
     }
 }

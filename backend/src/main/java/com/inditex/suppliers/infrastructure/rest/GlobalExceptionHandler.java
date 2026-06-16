@@ -37,8 +37,7 @@ public class GlobalExceptionHandler {
             IllegalArgumentException.class
     })
     public ResponseEntity<ErrorDto> badRequest(Exception ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorDto(ex.getMessage() == null ? "Bad Request" : ex.getMessage()));
+        return errorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), "Bad Request");
     }
 
     // ---------- 404 Not Found ----------
@@ -55,18 +54,12 @@ public class GlobalExceptionHandler {
             SupplierCannotBeBannedException.class
     })
     public ResponseEntity<ErrorDto> conflict(DomainException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorDto(ex.getMessage()));
+        return errorResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
-    /**
-     * Optimistic-lock failure: two concurrent transactions tried to update the same
-     * aggregate and the second one lost the race. The caller should refetch and retry.
-     */
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ErrorDto> optimisticLock(OptimisticLockingFailureException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorDto("Concurrent modification detected — please retry"));
+        return errorResponse(HttpStatus.CONFLICT, "Concurrent modification detected — please retry");
     }
 
     // ---------- 422 Unprocessable Content ----------
@@ -76,14 +69,20 @@ public class GlobalExceptionHandler {
             CountryUnknownException.class
     })
     public ResponseEntity<ErrorDto> unprocessable(DomainException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(new ErrorDto(ex.getMessage()));
+        return errorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
     }
 
     // ---------- 500 Fallback ----------
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorDto> generic(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorDto("Internal error"));
+        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error");
+    }
+
+    private static ResponseEntity<ErrorDto> errorResponse(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(new ErrorDto(message));
+    }
+
+    private static ResponseEntity<ErrorDto> errorResponse(HttpStatus status, String message, String fallback) {
+        return errorResponse(status, message == null ? fallback : message);
     }
 }

@@ -4,9 +4,9 @@ import com.inditex.suppliers.application.port.in.BanSupplierUseCase;
 import com.inditex.suppliers.application.port.out.DomainEventOutbox;
 import com.inditex.suppliers.application.port.out.SupplierMetricsPort;
 import com.inditex.suppliers.application.port.out.SupplierRepository;
-import com.inditex.suppliers.domain.exception.SupplierNotFoundException;
+import com.inditex.suppliers.application.util.DunsLookup;
+import com.inditex.suppliers.application.util.OutboxPayloads;
 import com.inditex.suppliers.domain.model.Supplier;
-import com.inditex.suppliers.domain.vo.Duns;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,13 +28,11 @@ public class BanSupplierService implements BanSupplierUseCase {
     @Override
     @Transactional
     public void ban(long dunsValue) {
-        Duns duns = Duns.of(dunsValue);
-        Supplier supplier = suppliers.findByDuns(duns)
-                .orElseThrow(() -> new SupplierNotFoundException(dunsValue));
+        Supplier supplier = DunsLookup.requireSupplier(suppliers, dunsValue);
         supplier.ban();
         suppliers.save(supplier);
         outbox.append("Supplier", String.valueOf(dunsValue), "SupplierBanned",
-                "{\"duns\":" + dunsValue + "}");
+                OutboxPayloads.supplierBanned(dunsValue));
         metrics.supplierBanned();
     }
 }

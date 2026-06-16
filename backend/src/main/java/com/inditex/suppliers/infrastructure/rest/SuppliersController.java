@@ -11,6 +11,7 @@ import com.inditex.suppliers.infrastructure.rest.dto.SupplierDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.inditex.suppliers.infrastructure.rest.validation.ValidDuns;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -44,13 +45,13 @@ public class SuppliersController {
 
     @Operation(summary = "Get a supplier by DUNS")
     @GetMapping("/{duns}")
-    public SupplierDto get(@PathVariable @Min(100_000_000L) @Max(999_999_999L) long duns) {
+    public SupplierDto get(@PathVariable @ValidDuns long duns) {
         return RestMapper.toDto(get.get(duns));
     }
 
     @Operation(summary = "Ban a supplier on probation")
     @PostMapping("/{duns}/ban")
-    public ResponseEntity<Void> ban(@PathVariable @Min(100_000_000L) @Max(999_999_999L) long duns) {
+    public ResponseEntity<Void> ban(@PathVariable @ValidDuns long duns) {
         ban.ban(duns);
         return ResponseEntity.noContent().build();
     }
