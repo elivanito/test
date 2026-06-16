@@ -31,11 +31,13 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Correlation-Id";
     public static final String MDC_KEY = "correlationId";
 
+    private static final int MAX_CORRELATION_ID_LENGTH = 64;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         String correlationId = request.getHeader(HEADER);
-        if (correlationId == null || correlationId.isBlank()) {
+        if (correlationId == null || correlationId.isBlank() || !isValid(correlationId)) {
             correlationId = UUID.randomUUID().toString();
         }
         MDC.put(MDC_KEY, correlationId);
@@ -45,5 +47,22 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
         } finally {
             MDC.remove(MDC_KEY);
         }
+    }
+
+    /**
+     * Rejects values containing control characters (CR, LF, TAB) that could
+     * enable log injection, and caps length to prevent abuse.
+     */
+    private static boolean isValid(String value) {
+        if (value.length() > MAX_CORRELATION_ID_LENGTH) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c < 0x20 || c == 0x7F) {
+                return false;
+            }
+        }
+        return true;
     }
 }

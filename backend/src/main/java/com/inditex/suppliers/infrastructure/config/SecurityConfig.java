@@ -40,15 +40,25 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     /**
-     * Permissive filter chain for non-production profiles. CSRF is disabled
-     * because the API is stateless JSON consumed by the SPA, not browser forms.
+     * Filter chain for non-production profiles. CSRF is disabled because the API
+     * is stateless JSON consumed by the SPA, not browser forms.
+     *
+     * <p>Even in dev, actuator endpoints beyond health/info are restricted to
+     * prevent accidental exposure of metrics and environment details if the
+     * service is reachable outside localhost (e.g. via Docker port mapping).</p>
      */
     @Bean
     @Profile("!prod")
     public SecurityFilterChain devSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(a -> a.anyRequest().permitAll());
+                .headers(h -> h
+                        .contentTypeOptions(cto -> {})
+                        .frameOptions(fo -> fo.deny()))
+                .authorizeHttpRequests(a -> a
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").denyAll()
+                        .anyRequest().permitAll());
         return http.build();
     }
 
@@ -65,10 +75,15 @@ public class SecurityConfig {
             throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .headers(h -> h
+                        .contentTypeOptions(cto -> {})
+                        .frameOptions(fo -> fo.deny()))
                 .authorizeHttpRequests(a -> a
                         // Operations
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasAuthority("SCOPE_actuator")
+                        // Block OpenAPI/Swagger in prod
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").denyAll()
                         // API
                         .requestMatchers(HttpMethod.GET, "/api/v1/suppliers/**")
                             .hasAuthority("SCOPE_suppliers:read")
@@ -78,7 +93,6 @@ public class SecurityConfig {
                             .hasAuthority("SCOPE_suppliers:write")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/**")
                             .hasAuthority("SCOPE_suppliers:write")
-                        // OpenAPI is closed in prod
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()));
         return http.build();
