@@ -1,0 +1,13 @@
+# Build output
+backend/target/
+frontend/dist/
+frontend/node_modules/
+
+# OS files
+.DS_Store
+__MACOSX/
+
+# IDE
+.idea/
+*.iml
+.vscode/
