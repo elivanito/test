@@ -1,0 +1,79 @@
+# Production profile overrides.
+# Activated with SPRING_PROFILES_ACTIVE=prod.
+#
+# Every value sourced from the environment is REQUIRED to start the app:
+# Spring fails fast if any of these placeholders cannot be resolved (no default).
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      # Sizing reasoning (revisit per environment with k6 results):
+      #   max_pool ≈ (core_count * 2) + effective_spindle_count   (HikariCP wiki)
+      # For a 4-vCPU app pod hitting PostgreSQL on SSD storage:
+      #   (4 * 2) + 1 = 9 → round to 10 connections per pod.
+      # With N pods, total = N * 10. Stay under
+      #   max_connections (Postgres) - (replication slots + admin headroom).
+      # Override via env when the deployment shape changes.
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      # Detect connection leaks early: a single missed close stalls the pool.
+      leak-detection-threshold: 30000
+      # Postgres default idle_in_transaction_session_timeout is unlimited; cap
+      # client side so a runaway @Transactional cannot pin a connection forever.
+      max-lifetime: 1800000
+      connection-timeout: 5000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    # Never auto-clean a production schema.
+    clean-disabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Identity provider issuer (Keycloak/Auth0/Okta…). Required in prod.
+          issuer-uri: ${OIDC_ISSUER_URI}
+
+server:
+  error:
+    # Do not leak exception messages to clients in production.
+    include-message: never
+    include-stacktrace: never
+
+management:
+  tracing:
+    # On in prod (overrides the base default of false). A collector is always
+    # deployed alongside the app here; override with TRACING_ENABLED if not.
+    enabled: ${TRACING_ENABLED:true}
+    sampling:
+      # 10% head sampling; tail-based at collector if needed.
+      probability: 0.1
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+  endpoint:
+    health:
+      # Detailed health requires SCOPE_actuator (see SecurityConfig).
+      show-details: when-authorized
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+suppliers:
+  cursor:
+    # 32+ bytes of entropy. Rotate via secrets manager — old cursors will be
+    # rejected by HMAC validation, which is the desired behavior on key rotation.
+    key: ${CURSOR_HMAC_KEY}
+
+logging:
+  level:
+    com.inditex.suppliers: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN

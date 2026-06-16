@@ -1,0 +1,10 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/countries/.*"
+  },
+  "response": {
+    "status": 404
+  }
+}

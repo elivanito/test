@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.inditex.suppliers.infrastructure.rest.CandidatesControllerTest
+-------------------------------------------------------------------------------
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.604 s -- in com.inditex.suppliers.infrastructure.rest.CandidatesControllerTest
