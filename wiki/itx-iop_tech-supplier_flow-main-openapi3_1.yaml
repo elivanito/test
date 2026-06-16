@@ -1,0 +1,370 @@
+openapi: 3.1.0
+info:
+  title: ITX Supplier life cycle
+  description: |-
+    ITX Supplier life cycle
+  version: 1.7.0
+servers:
+  - url: http://localhost:8080
+    description: Local server
+tags:
+  - name: candidate
+    description: Supplier requesting to collaborate with Inditex
+  - name: supplier
+    description: Verified supplier working with Inditex
+paths:
+  /candidates:
+    post:
+      tags:
+        - candidate
+      summary: Create a new candidate application
+      description: |-
+        Create a new candidate application
+      operationId: addCandidate
+      requestBody:
+        description: Create a new candidate application
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+        required: true
+      responses:
+        '201':
+          description: Candidate Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Candidate already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                candidateAlreadyExists:
+                  summary: Candidate already exists
+                  value:
+                    info: Candidate already exists
+                supplierBanned:
+                  summary: Supplier banned
+                  value:
+                    info: Supplier banned
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+  /candidates/{duns}:
+    get:
+      tags:
+        - candidate
+      summary: Get candidate
+      description: |-
+        Get candidate
+      operationId: getCandidate
+      parameters:
+        - $ref: '#/components/parameters/PathDuns'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+        '404':
+          description: Candidate not found
+          $ref: '#/components/responses/NotFound'
+  /candidates/{duns}/accept:
+    post:
+      tags:
+        - candidate
+      summary: Accept pending candidate application
+      description: |-
+        Accept pending candidate application
+      operationId: acceptCandidate
+      parameters:
+        - $ref: '#/components/parameters/PathDuns'
+      requestBody:
+        description: Accept pending candidate application
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateAccept'
+        required: true
+      responses:
+        '204':
+          description: Candidate accepted Successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Candidate not found
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Candidate can not be accepted
+          $ref: '#/components/responses/Conflict'
+  /candidates/{duns}/refuse:
+    post:
+      tags:
+        - candidate
+      summary: Refuse pending candidate application
+      description: |-
+        Refuse pending candidate application
+      operationId: refuseCandidate
+      parameters:
+        - $ref: '#/components/parameters/PathDuns'
+      responses:
+        '204':
+          description: Candidate refused Successfully
+        '404':
+          description: Candidate not found
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Candidate can not be refused
+          $ref: '#/components/responses/Conflict'
+  /suppliers/potential:
+    get:
+      tags:
+        - supplier
+      summary: Get potential suppliers
+      description: |-
+        Get supplier
+      operationId: potentialSuppliers
+      parameters:
+        - name: rate
+          in: query
+          description: Amount of the order to simulate
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 250
+        - $ref: '#/components/parameters/QueryLimit'
+        - $ref: '#/components/parameters/QueryOffset'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PotentialSuppliers'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /suppliers/{duns}:
+    get:
+      tags:
+        - supplier
+      summary: Get supplier
+      description: |-
+        Get supplier
+      operationId: getSupplier
+      parameters:
+        - $ref: '#/components/parameters/PathDuns'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '404':
+          description: Supplier not found
+          $ref: '#/components/responses/NotFound'
+  /suppliers/{duns}/ban:
+    post:
+      tags:
+        - supplier
+      summary: Ban supplier
+      description: |-
+        Ban supplier
+      operationId: banSupplier
+      parameters:
+        - $ref: '#/components/parameters/PathDuns'
+      responses:
+        '204':
+          description: Supplier banned Successfully
+        '404':
+          description: Supplier not found
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Supplier can not be banned
+          $ref: '#/components/responses/Conflict'
+components:
+  parameters:
+    PathDuns:
+      name: duns
+      in: path
+      description: DUNS (Data Universal Numbering System)
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 100000000
+        maximum: 999999999
+    QueryLimit:
+      name: limit
+      in: query
+      description: The suggested limit to restrict the number of items
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 10
+        default: 10
+      example: 10
+    QueryOffset:
+      name: offset
+      in: query
+      description: Numeric offset of the first element provided
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+      example: 0
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The specified resource was not found
+    UnprocessableContent:
+      description: Unprocessable Content
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Candidate:
+      type: object
+      properties:
+        annualTurnover:
+          type: integer
+          description: Annual turnover (in euros)
+          format: int64
+          minimum: 0
+          examples: [1250]
+        country:
+          type: string
+          description: |
+            Country where is headquartered
+
+            format: ISO 3166-1 alpha-2 code
+          minLength: 2
+          maxLength: 2
+          examples: [ES, FR, PT]
+        duns:
+          type: integer
+          description: DUNS (Data Universal Numbering System)
+          format: int32
+          minimum: 100000000
+          maximum: 999999999
+          examples: [123456789]
+        name:
+          type: string
+          description: Name
+          minLength: 1
+          examples: [Zippers & Buttons]
+      required:
+        - annualTurnover
+        - country
+        - duns
+        - name
+    CandidateAccept:
+      type: object
+      properties:
+        sustainabilityRating:
+          type: string
+          description: sustainability rating
+          enum: [A, B, C, D, E]
+      required: 
+        - sustainabilityRating
+    Error:
+      type: object
+      properties:
+        info:
+          type: string
+          description: Info about the error
+          examples: [invalid operation service not ready]
+      required: 
+        - info
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+          format: int32
+          description: The suggested limit to restrict the number of items
+          minimum: 1
+          examples: [10]
+        offset:
+          type: integer
+          format: int32
+          description: Numeric offset of the first element provided
+          minimum: 0
+          examples: [0]
+        total:
+          type: integer
+          format: int32
+          description: Total number of elements in the complete dataset. It is recommended to report cases that do not affect performance
+          minimum: 0
+          examples: [500]
+      required: 
+        - limit
+        - offset
+        - total
+    PotentialSupplier:
+      allOf:
+        - $ref: '#/components/schemas/Supplier'
+        - type: object
+          properties:
+            score:
+              type: number
+              description: supplier score
+              format: double
+              minimum: 0
+              examples: [123456.78]
+      required:
+        - score
+        - sustainabilityRating
+    PotentialSuppliers:
+      type: object
+      properties:
+        data:
+          type: array
+          description: Potential suppliers with the calculated score
+          items:
+            $ref: '#/components/schemas/PotentialSupplier'
+          maxItems: 10
+        pagination:
+          type: object
+          $ref: '#/components/schemas/Pagination'
+      required:
+        - data
+        - pagination
+    Supplier:
+      allOf:
+        - $ref: '#/components/schemas/Candidate'
+        - type: object
+          properties:
+            status:
+              type: string
+              description: Supplier status
+              enum: [Active, Disqualified]
+            sustainabilityRating:
+              type: string
+              description: Sustainability rating
+              enum: [A, B, C, D, E]
+      required:
+        - status
+        - sustainabilityRating

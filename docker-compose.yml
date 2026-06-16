@@ -1,0 +1,67 @@
+services:
+  country-service:
+    image: wiremock/wiremock:latest
+    container_name: itx-country-service
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+    command: ["--global-response-templating"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  db:
+    image: postgres:16-alpine
+    container_name: itx-db
+    environment:
+      POSTGRES_USER: suppliers
+      POSTGRES_PASSWORD: suppliers
+      POSTGRES_DB: suppliers
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U suppliers -d suppliers"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: itx-backend
+    depends_on:
+      db:
+        condition: service_healthy
+      country-service:
+        condition: service_started
+    environment:
+      # Container-network settings (datasource host, country-service URL,
+      # credentials) live in application-docker.yml, selected by this profile.
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_BASE_URL: /api
+    container_name: itx-frontend
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "4200:80"
+
+volumes:
+  db-data:

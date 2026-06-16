@@ -1,0 +1,68 @@
+openapi: 3.1.0
+info:
+  title: ITX Country information
+  description: |-
+    ITX Country information
+  version: 1.2.0
+servers:
+  - url: http://localhost:8088
+    description: Local Mock Server
+tags:
+  - name: country
+    description: Operations related with Country
+paths:
+  /countries/{country}:
+    get:
+      tags:
+        - country
+      summary: Get information about country
+      description: |-
+        Get information about country
+      operationId: getCountry
+      parameters:
+        - name: country
+          in: path
+          description: Country code (ISO 3166-1 alpha-2)
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  responses:
+    NotFound:
+      description: The specified resource was not found
+  schemas:
+    Country:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Country code (ISO 3166-1 alpha-2)
+          minLength: 2
+          maxLength: 2
+          examples: [ES, FR, PT]
+        isBanned:
+          type: boolean 
+          examples: [false, true]
+      required:
+        - name
+        - isBanned
+    Error:
+      type: object
+      properties:
+        info:
+          type: string
+          description: Info about the error
+          examples: [invalid operation service not ready]
+      required: 
+        - info
